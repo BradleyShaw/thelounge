@@ -69,6 +69,7 @@ Msg.Type = {
 	MONOSPACE_BLOCK: "monospace_block",
 	NICK: "nick",
 	NOTICE: "notice",
+	PVNOTICE: "pvnotice",
 	PART: "part",
 	QUIT: "quit",
 	CTCP: "ctcp",
@@ -79,6 +80,7 @@ Msg.Type = {
 	WHOIS: "whois",
 	RAW: "raw",
 	PLUGIN: "plugin",
+	WALLOPS: "wallops",
 };
 
 module.exports = Msg;

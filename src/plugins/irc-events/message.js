@@ -6,6 +6,7 @@ const LinkPrefetch = require("./link");
 const cleanIrcMessage = require("../../../client/js/helpers/ircmessageparser/cleanIrcMessage");
 const Helper = require("../../helper");
 const nickRegExp = /(?:\x03[0-9]{1,2}(?:,[0-9]{1,2})?)?([\w[\]\\`^{|}-]+)/g;
+const pvNoticeRegExp = /^\[(\S+)\]\s/;
 
 module.exports = function (irc, network) {
 	const client = this;
@@ -18,6 +19,23 @@ module.exports = function (irc, network) {
 		}
 
 		data.type = Msg.Type.NOTICE;
+
+		// if the notice starts with [#channel] and we're in #channel
+		// then treat it as PvNotice and display in the relevant channel
+		if (data.target.toLowerCase() === irc.user.nick.toLowerCase()) {
+			const found = data.message.match(pvNoticeRegExp);
+
+			if (found) {
+				const chan = network.getChannel(found[1]);
+
+				if (chan && chan.type === Chan.Type.CHANNEL) {
+					data.target = found[1];
+					data.message = data.message.replace(found[0], "");
+					data.type = Msg.Type.PVNOTICE;
+				}
+			}
+		}
+
 		handleMessage(data);
 	});
 
@@ -33,7 +51,13 @@ module.exports = function (irc, network) {
 
 	irc.on("wallops", function (data) {
 		data.from_server = true;
-		data.type = Msg.Type.NOTICE;
+		data.type = Msg.Type.WALLOPS;
+
+		// WALLOPS could come from a server too
+		if (!data.nick) {
+			data.nick = data.hostname || network.host;
+		}
+
 		handleMessage(data);
 	});
 
@@ -51,8 +75,11 @@ module.exports = function (irc, network) {
 				return Helper.compareHostmask(entry, data);
 			});
 
-		// Server messages go to server window, no questions asked
-		if (data.from_server) {
+		// Server messages that are targeted at us go to the server window
+		if (
+			data.from_server &&
+			(!data.target || data.target.toLowerCase() === irc.user.nick.toLowerCase())
+		) {
 			chan = network.channels[0];
 			from = chan.getUser(data.nick);
 		} else {
