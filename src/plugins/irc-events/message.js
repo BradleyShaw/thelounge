@@ -75,10 +75,12 @@ module.exports = function (irc, network) {
 				return Helper.compareHostmask(entry, data);
 			});
 
-		// Server messages that are targeted at us go to the server window
+		// Server messages that aren't targeted at a channel go to the server window
 		if (
 			data.from_server &&
-			(!data.target || data.target.toLowerCase() === irc.user.nick.toLowerCase())
+			(!data.target ||
+				!network.getChannel(data.target) ||
+				network.getChannel(data.target).type !== Chan.Type.CHANNEL)
 		) {
 			chan = network.channels[0];
 			from = chan.getUser(data.nick);
